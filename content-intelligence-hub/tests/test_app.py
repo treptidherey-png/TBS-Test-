@@ -1,0 +1,103 @@
+import unittest
+import app
+import planner
+
+
+class ContentIntelligenceMVPTests(unittest.TestCase):
+    def test_search_finds_existing_tbs_intelligence(self):
+        records = [
+            {
+                "title": "Strong business, weak online representation",
+                "record_type": "Founder Observation",
+                "raw_input": "A founder can have a substantial business while their online presence makes them look early-stage.",
+                "source": "TBS editorial observation",
+                "evidence_status": "Inferred",
+            },
+            {
+                "title": "More content will not fix weak positioning",
+                "record_type": "Founder Observation",
+                "raw_input": "Increasing posting volume does not repair unclear representation.",
+                "source": "TBS content system",
+                "evidence_status": "Inferred",
+            },
+        ]
+        results = app.search(records, "strong business weak online presence")
+        self.assertEqual(results[0]["title"], "Strong business, weak online representation")
+
+    def test_search_returns_no_match_when_intelligence_is_missing(self):
+        records = [{
+            "title": "LinkedIn representation",
+            "record_type": "Founder Observation",
+            "raw_input": "Representation comes before visibility.",
+        }]
+        self.assertEqual(app.search(records, "industrial export pricing model"), [])
+
+    def test_search_is_case_insensitive(self):
+        records = [{
+            "title": "Buyer Visibility",
+            "record_type": "Buyer Insight",
+            "raw_input": "Buyers need to recognize the business before engaging.",
+        }]
+        results = app.search(records, "buyer visibility")
+        self.assertEqual(len(results), 1)
+
+    def test_available_pool_excludes_scheduled_content(self):
+        records = [
+            {"id": "1", "title": "Available", "lifecycle_status": "Approved", "scheduled_date": ""},
+            {"id": "2", "title": "Scheduled", "lifecycle_status": "Scheduled", "scheduled_date": "2026-09-29"},
+        ]
+        self.assertEqual([r["title"] for r in app.available_records(records)], ["Available"])
+
+    def test_calendar_selection_requires_approval(self):
+        records = [{"id": "1", "title": "Draft", "lifecycle_status": "Captured"}]
+        target = next(r for r in records if r["id"] == "1")
+        self.assertNotEqual(target["lifecycle_status"], "Approved")
+
+    def test_scheduled_content_is_in_calendar_and_out_of_inventory(self):
+        records = [{
+            "id": "1", "title": "Approved post", "lifecycle_status": "Scheduled",
+            "scheduled_date": "2026-09-29", "scheduled_slot": "Tuesday, TOFU",
+        }]
+        self.assertEqual(app.available_records(records), [])
+        self.assertEqual(len(app.calendar_records(records)), 1)
+        self.assertEqual(app.calendar_records(records)[0]["scheduled_slot"], "Tuesday, TOFU")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class PlannerTests(unittest.TestCase):
+    def test_single_prompt_prefers_existing_asset(self):
+        records = [{
+            "id": "1", "title": "How to use LinkedIn for business",
+            "record_type": "Content Draft",
+            "raw_input": "Explain what LinkedIn is for and how founders should use it.",
+            "lifecycle_status": "Approved", "evidence_status": "Inferred",
+        }]
+        result = planner.build_recommendation(records, "We need an article for tomorrow about how to use LinkedIn for business.", target_date="2026-09-29")
+        self.assertEqual(result["decision"], "reuse_or_refine")
+        self.assertEqual(result["status"], "Awaiting Trepti Approval")
+        self.assertFalse(result["drafting_allowed"])
+        self.assertEqual(result["candidate"]["title"], "How to use LinkedIn for business")
+
+    def test_single_prompt_identifies_gap_without_inventing_asset(self):
+        records = [{
+            "id": "1", "title": "Founder positioning",
+            "record_type": "Content Draft",
+            "raw_input": "Why representation matters.",
+            "lifecycle_status": "Approved",
+        }]
+        result = planner.build_recommendation(records, "We need an article about industrial export pricing.", target_date="2026-09-29")
+        self.assertEqual(result["decision"], "research_gap")
+        self.assertIsNone(result["candidate"])
+        self.assertFalse(result["drafting_allowed"])
+
+    def test_scheduled_and_published_content_is_not_candidate(self):
+        records = [
+            {"id": "1", "title": "Published LinkedIn guide", "raw_input": "LinkedIn guide", "lifecycle_status": "Published"},
+            {"id": "2", "title": "Scheduled LinkedIn guide", "raw_input": "LinkedIn guide", "lifecycle_status": "Scheduled", "scheduled_date": "2026-09-29"},
+        ]
+        self.assertEqual(planner.candidate_records(records, "LinkedIn guide"), [])
+
+

@@ -13,6 +13,12 @@ The system must make this possible:
 
 The system should first retrieve what TBS already knows, identify gaps, research only those gaps, and recommend one content direction. It must stop at the Trepti approval gate before drafting.
 
+A second core use case is calendar planning:
+
+> "We need content for this week. What do we already have that we can use?"
+
+The system must inventory existing TBS content before recommending new content.
+
 ## 2. What we are NOT building
 
 - Not a replacement for Notion.
@@ -24,7 +30,7 @@ The system should first retrieve what TBS already knows, identify gaps, research
 
 ## 3. Source-of-truth architecture
 
-Notion remains the source of truth for business knowledge, decisions, SOPs and client records.
+Notion remains the source of truth for business knowledge, decisions, SOPs, client records and existing content.
 
 GitHub becomes the source of truth for the executable content-intelligence workflow:
 - data model
@@ -124,7 +130,48 @@ The application should explicitly distinguish:
 
 This is the mechanism that prevents duplicate research.
 
-## 8. Approval state
+## 8. Existing-content inventory and calendar reuse
+
+When planning a new content calendar, the system must first inspect existing TBS content available in Notion, including:
+- completed but unpublished content
+- approved but unscheduled content
+- drafts
+- article drafts and completed articles
+- topic-bank entries with sufficient development
+- previously created content that may be repurposed
+- scheduled content that should be checked for overlap
+- published content that creates repetition risk
+
+The system should classify each relevant item for calendar planning as:
+
+**Ready to use** — can be scheduled with no substantive work
+
+**Needs light refinement** — already valuable but needs editing, updating or formatting
+
+**Needs approval** — developed enough to consider, but Trepti has not approved it for use
+
+**Repurpose candidate** — existing material can support a new format or angle without pretending it is new thinking
+
+**Hold** — useful, but not appropriate for the current calendar
+
+**Do not use** — outdated, duplicated, strategically misaligned or otherwise unsuitable
+
+For the current week's calendar, the system should:
+1. Identify the actual publishing capacity/time available.
+2. Inventory relevant existing content first.
+3. Recommend the strongest usable existing pieces for the available slots.
+4. Identify gaps only after existing content has been evaluated.
+5. Recommend new content only for genuine gaps.
+6. Show why each existing piece is being recommended.
+7. Never schedule or publish automatically.
+
+The planning principle is:
+
+> **Use what TBS has already created before asking TBS to create more.**
+
+This is a planning rule, not a command to force unsuitable old content into the calendar. Strategic fit and quality remain the filters.
+
+## 9. Approval state
 
 The system must enforce:
 
@@ -134,7 +181,9 @@ Drafting is unavailable until Approved.
 
 The approval gate is a business control, not merely a UI label.
 
-## 9. Technical shape
+Calendar recommendations are also recommendations, not automatic scheduling actions. Trepti approves the calendar direction before scheduling or new production.
+
+## 10. Technical shape
 
 Use a lightweight full-stack web application.
 
@@ -149,7 +198,7 @@ Keep the storage implementation replaceable so the MVP can start lightweight and
 
 Do not introduce external infrastructure unless the MVP demonstrates that it is needed.
 
-## 10. First build
+## 11. First build
 
 Build only enough to prove:
 
@@ -163,7 +212,13 @@ Example:
 
 The system should find existing TBS thinking and evidence before suggesting new research.
 
-## 11. Business value
+A second acceptance test is a real weekly calendar request:
+
+> "Find everything already created but not yet used, determine what can fill this week's available slots, and identify only the remaining gaps."
+
+The system should use existing Notion content as the first planning pool and must not invent new content simply to fill the calendar.
+
+## 12. Business value
 
 If this works, TBS gains:
 - less repeated research
@@ -174,12 +229,14 @@ If this works, TBS gains:
 - visible repetition risks
 - cleaner separation between intelligence and content
 - a growing institutional memory for TBS
+- better utilization of content already created
+- less unnecessary content production
 
 The goal is not more content.
 
-The goal is **better decisions about what deserves to become content.**
+The goal is **better decisions about what deserves to become content and better use of what TBS has already created.**
 
-## 12. Build discipline
+## 13. Build discipline
 
 Before adding features, test the MVP against real TBS workflows.
 

@@ -1,0 +1,23 @@
+name: TBS Content Intelligence Hub Tests
+
+on:
+  pull_request:
+    paths:
+      - "content-intelligence-hub/**"
+  push:
+    branches:
+      - "feat/content-intelligence-hub-mvp"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: content-intelligence-hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v

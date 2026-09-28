@@ -1,0 +1,25 @@
+name: Content Intelligence Tests
+
+on:
+  push:
+    paths:
+      - 'content-intelligence-hub/**'
+      - '.github/workflows/content-intelligence-tests.yml'
+  pull_request:
+    paths:
+      - 'content-intelligence-hub/**'
+      - '.github/workflows/content-intelligence-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: content-intelligence-hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
