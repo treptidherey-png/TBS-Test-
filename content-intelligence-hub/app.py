@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import re
 from html import escape
+from planner import build_recommendation
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "data.json"
@@ -101,7 +102,7 @@ button{{background:#f5d84a;color:#111;border:0;border-radius:8px;padding:10px 14
 button.secondary{{background:#333;color:#fff}} .tag{{display:inline-block;border:1px solid #555;border-radius:999px;padding:4px 8px;font-size:12px;margin-right:6px}}
 small{{color:#aaa}} h1{{margin-bottom:8px}} h2{{margin-top:0}} .muted{{color:#aaa}}
 </style></head><body>
-<div class="nav"><a href="/">Home</a><a href="/capture">Capture</a><a href="/inventory">Master Content Inventory</a><a href="/develop">Develop an Idea</a><a href="/calendar">Content Calendar</a></div>
+<div class="nav"><a href="/">Home</a><a href="/capture">Capture</a><a href="/inventory">Master Content Inventory</a><a href="/develop">Develop an Idea</a><a href="/plan">One-Prompt Planner</a><a href="/calendar">Content Calendar</a></div>
 {body}</body></html>"""
 
 
@@ -177,7 +178,7 @@ def develop(records, q="", notice=""):
 <p>The MVP stops before drafting. After evidence and interpretation are developed, one direction can be recommended and sent to the Trepti approval gate.</p></div>"""
     return page("Develop an Idea", body)
 
-
+\ndef planner_view(records, request=""):\n    result = build_recommendation(records, request) if request else None\n    if not result:\n        body = """<h1>One-Prompt Planner</h1><p>Say what you need. The planner checks the local inventory first and stops at approval.</p>\n<form method="get"><label>Request</label><input name="request" placeholder="e.g. We need an article for tomorrow"><button>Plan</button></form>"""\n        return page("One-Prompt Planner", body)\n    candidate = result.get("candidate") or {}\n    demand = "".join(f"<li>{escape(str(x))}</li>" for x in result.get("demand_evidence", [])) or "<li>Live demand validation still needs the external research layer.</li>"\n    body = f"""<h1>Recommendation</h1>\n<div class="card"><span class="tag">{escape(result["status"])}</span><h2>{escape(result["recommended_direction"])}</h2>\n<p><strong>Question:</strong> {escape(result["question"])}</p>\n<p><strong>Intent:</strong> {escape(result["search_intent"])}</p>\n<p><strong>Existing asset:</strong> {escape(candidate.get("title") or "None found")}</p>\n<p><strong>Current asset question:</strong> {escape(candidate.get("question_it_currently_answers") or "N/A")}</p>\n<p><strong>Decision:</strong> {escape(result["reuse_decision"])}</p>\n<p><strong>Gap:</strong> {escape(result["gap"])}</p>\n</div>\n<div class="card"><h2>Demand evidence</h2><ul>{demand}</ul></div>\n<div class="card"><h2>Approval gate</h2><p>Drafting: <strong>blocked</strong>. Publishing: <strong>blocked</strong>.</p><p>The system recommends; Trepti approves.</p></div>"""\n    return page("One-Prompt Planner", body)\n\n
 def calendar_view(records):
     items = calendar_records(records)
     cards = ""
@@ -233,6 +234,9 @@ def main():
                 q = parse_qs(u.query).get("q", [""])[0]
                 self.send_html(develop(load_records(), q=q)); return
             if u.path == "/calendar": self.send_html(calendar_view(load_records())); return
+            if u.path == "/plan":
+                request = parse_qs(u.query).get("request", [""])[0]
+                self.send_html(planner_view(load_records(), request)); return
             self.send_html(page("Not found", "<h1>404</h1>"), 404)
 
         def do_POST(self):
