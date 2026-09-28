@@ -107,7 +107,7 @@ small{{color:#aaa}} h1{{margin-bottom:8px}} h2{{margin-top:0}} .muted{{color:#aa
 
 def home():
     body = """<h1>TBS Content Intelligence Hub</h1>
-<p>One master content pool. Use existing work first. Move selected pieces into the active calendar.</p>
+<p>One master content pool. Use existing work first. Move approved pieces into the active calendar.</p>
 <div class="grid">
 <div class="card"><h2>Capture</h2><p>Put useful ideas, observations, research, proof, and drafts into the master pool.</p><a href="/capture">Capture intelligence →</a></div>
 <div class="card"><h2>Master Content Inventory</h2><p>Everything available to use, with its current lifecycle status.</p><a href="/inventory">Open inventory →</a></div>
@@ -137,13 +137,17 @@ def inventory(records, q="", status=""):
         pool = [r for r in pool if r.get("lifecycle_status") == status]
     cards = ""
     for r in pool:
-        cards += f"""<div class="card"><span class="tag">{escape(r.get('record_type',''))}</span><span class="tag">{escape(r.get('lifecycle_status','Captured'))}</span>
-<h3>{escape(r.get('title',''))}</h3><p>{escape(r.get('raw_input',''))}</p>
-<small>Source: {escape(r.get('source','') or 'Not recorded')} · Evidence: {escape(r.get('evidence_status',''))}</small>
-<form method="post" action="/schedule" style="margin-top:14px"><input type="hidden" name="id" value="{escape(r.get('id',''))}">
+        action = ""
+        if r.get("lifecycle_status") != "Approved":
+            action = f'''<form method="post" action="/approve" style="margin-top:14px"><input type="hidden" name="id" value="{escape(r.get('id',''))}"><button>Approve for calendar selection</button></form>'''
+        else:
+            action = f'''<form method="post" action="/schedule" style="margin-top:14px"><input type="hidden" name="id" value="{escape(r.get('id',''))}">
 <label>Schedule date</label><input type="date" name="scheduled_date" required>
 <label>Slot</label><input name="scheduled_slot" placeholder="e.g. Tuesday, TOFU" required>
-<button>Move to calendar</button></form></div>"""
+<button>Move to calendar</button></form>'''
+        cards += f"""<div class="card"><span class="tag">{escape(r.get('record_type',''))}</span><span class="tag">{escape(r.get('lifecycle_status','Captured'))}</span>
+<h3>{escape(r.get('title',''))}</h3><p>{escape(r.get('raw_input',''))}</p>
+<small>Source: {escape(r.get('source','') or 'Not recorded')} · Evidence: {escape(r.get('evidence_status',''))}</small>{action}</div>"""
     body = f"""<h1>Master Content Inventory</h1>
 <p>This is the available content pool. Once a piece is moved to the calendar, it no longer appears here.</p>
 <form method="get"><input name="q" value="{escape(q)}" placeholder="Search the master inventory">
@@ -234,11 +238,19 @@ def main():
         def do_POST(self):
             if self.path == "/capture":
                 records = create_record(self.form_data())
-                self.send_html(inventory(records, notice="")); return
+                self.send_html(inventory(records)); return
+            if self.path == "/approve":
+                form = self.form_data(); records = load_records()
+                record = update_record(records, form.get("id", ""), lifecycle_status="Approved")
+                if not record: self.send_html(page("Not found", "<h1>Record not found</h1>"), 404); return
+                save_records(records); self.send_html(inventory(records)); return
             if self.path == "/schedule":
                 form = self.form_data(); records = load_records()
+                target = next((r for r in records if r.get("id") == form.get("id", "")), None)
+                if not target: self.send_html(page("Not found", "<h1>Record not found</h1>"), 404); return
+                if target.get("lifecycle_status") != "Approved":
+                    self.send_html(page("Approval required", "<h1>Approval required</h1><p>A record must be approved before it can enter the calendar.</p>"), 409); return
                 record = update_record(records, form.get("id", ""), lifecycle_status="Scheduled", scheduled_date=form.get("scheduled_date", ""), scheduled_slot=form.get("scheduled_slot", ""))
-                if not record: self.send_html(page("Not found", "<h1>Record not found</h1>"), 404); return
                 save_records(records); self.send_html(calendar_view(records)); return
             if self.path == "/unschedule":
                 form = self.form_data(); records = load_records()
