@@ -178,7 +178,29 @@ def develop(records, q="", notice=""):
 <p>The MVP stops before drafting. After evidence and interpretation are developed, one direction can be recommended and sent to the Trepti approval gate.</p></div>"""
     return page("Develop an Idea", body)
 
-\ndef planner_view(records, request=""):\n    result = build_recommendation(records, request) if request else None\n    if not result:\n        body = """<h1>One-Prompt Planner</h1><p>Say what you need. The planner checks the local inventory first and stops at approval.</p>\n<form method="get"><label>Request</label><input name="request" placeholder="e.g. We need an article for tomorrow"><button>Plan</button></form>"""\n        return page("One-Prompt Planner", body)\n    candidate = result.get("candidate") or {}\n    demand = "".join(f"<li>{escape(str(x))}</li>" for x in result.get("demand_evidence", [])) or "<li>Live demand validation still needs the external research layer.</li>"\n    body = f"""<h1>Recommendation</h1>\n<div class="card"><span class="tag">{escape(result["status"])}</span><h2>{escape(result["recommended_direction"])}</h2>\n<p><strong>Question:</strong> {escape(result["question"])}</p>\n<p><strong>Intent:</strong> {escape(result["search_intent"])}</p>\n<p><strong>Existing asset:</strong> {escape(candidate.get("title") or "None found")}</p>\n<p><strong>Current asset question:</strong> {escape(candidate.get("question_it_currently_answers") or "N/A")}</p>\n<p><strong>Decision:</strong> {escape(result["reuse_decision"])}</p>\n<p><strong>Gap:</strong> {escape(result["gap"])}</p>\n</div>\n<div class="card"><h2>Demand evidence</h2><ul>{demand}</ul></div>\n<div class="card"><h2>Approval gate</h2><p>Drafting: <strong>blocked</strong>. Publishing: <strong>blocked</strong>.</p><p>The system recommends; Trepti approves.</p></div>"""\n    return page("One-Prompt Planner", body)\n\n
+
+def planner_view(records, request=""):
+    result = build_recommendation(records, request) if request else None
+    if not result:
+        body = """<h1>One-Prompt Planner</h1><p>Say what you need. The planner checks the local inventory first and stops at approval.</p>
+<form method="get"><label>Request</label><input name="request" placeholder="e.g. We need an article for tomorrow"><button>Plan</button></form>"""
+        return page("One-Prompt Planner", body)
+    candidate = result.get("candidate") or {}
+    demand = "".join(f"<li>{escape(str(x))}</li>" for x in result.get("demand_evidence", [])) or "<li>Live demand validation still needs the external research layer.</li>"
+    body = f"""<h1>Recommendation</h1>
+<div class="card"><span class="tag">{escape(result["status"])}</span><h2>{escape(result["recommended_direction"])}</h2>
+<p><strong>Question:</strong> {escape(result["question"])}</p>
+<p><strong>Intent:</strong> {escape(result["search_intent"])}</p>
+<p><strong>Existing asset:</strong> {escape(candidate.get("title") or "None found")}</p>
+<p><strong>Current asset question:</strong> {escape(candidate.get("question_it_currently_answers") or "N/A")}</p>
+<p><strong>Decision:</strong> {escape(result["reuse_decision"])}</p>
+<p><strong>Gap:</strong> {escape(result["gap"])}</p>
+</div>
+<div class="card"><h2>Demand evidence</h2><ul>{demand}</ul></div>
+<div class="card"><h2>Approval gate</h2><p>Drafting: <strong>blocked</strong>. Publishing: <strong>blocked</strong>.</p><p>The system recommends; Trepti approves.</p></div>"""
+    return page("One-Prompt Planner", body)
+
+
 def calendar_view(records):
     items = calendar_records(records)
     cards = ""
